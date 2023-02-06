@@ -1,5 +1,3 @@
-import random
-
 import pygame
 from pygame.locals import *  # The "Prelude"
 from enum import Enum, auto
@@ -14,7 +12,7 @@ class BackgroundTile:
         self.rect = rect
 
     def draw(self, screen, border_radius):
-        pygame.draw.rect(screen, self.color, self.rect, border_radius = border_radius)
+        pygame.draw.rect(screen, self.color, self.rect, border_radius=border_radius)
 
 
 class Direction(Enum):
@@ -25,10 +23,6 @@ class Direction(Enum):
 
 
 class ForegroundTile:
-    # The time it takes for a tile to slide from one end of the grid to the other (the longest slide time possible)
-    longest_slide_time_in_mills: Final = 100  # For config
-    __instances = []
-
     def __init__(self, rect: Rect, *, grid_position: (int, int)):
         self.value = 2
         self._moving = None
@@ -61,42 +55,51 @@ class ForegroundTile:
         self._move(background_tile_grid, slide_speed)
         self.draw(screen, border_radius)
 
-    @staticmethod
-    def add_one(foreground_tile_grid: list[list], background_tile_grid: list[list[BackgroundTile]]):
-        free_tile_grid_positions = []
-        for (x, e) in enumerate(foreground_tile_grid):
-            for (y, v) in enumerate(e):
-                if v is None:
-                    free_tile_grid_positions.append((x, y))
-        x, y = random.choice(free_tile_grid_positions)
-        # noinspection PyTypeChecker
-        foreground_tile_grid[x][y] = ForegroundTile(background_tile_grid[x][y].rect, grid_position=(x, y))
+
+def add_foreground_tile(
+        foreground_tile_grid: list[list[ForegroundTile | None]],
+        background_tile_grid: list[list[BackgroundTile]]
+):
+    free_grid_positions = []
+    for x, e in enumerate(foreground_tile_grid):
+        for y, v in enumerate(e):
+            if v is None:
+                free_grid_positions.append((x, y))
+    x, y = rand.choice(free_grid_positions)
+    # noinspection PyTypeChecker
+    foreground_tile_grid[x][y] = ForegroundTile(background_tile_grid[x][y].rect, grid_position=(x, y))
 
 
-def main(screen_size, frame_rate):  # Treat screen_size as final unless you MUST do otherwise (trust me)
-    """Make this for initlization code?"""
+def init(*, screen_size, frame_rate, big_square_margin=10, longest_slide_time_in_mills=100):  # Treat screen_size as
+    # final unless you MUST do otherwise (trust me)
+    """
+    Initlization code (code run before the loop)
+
+    longest_slide_time_in_mills:
+        The time it takes for a tile to slide from one end of the grid to the other (the longest slide time possible)
+    """
     pygame.init()
     screen: pygame.Surface = pygame.display.set_mode((screen_size, screen_size))
     screen.fill(Color("#faf8ef"))
-    big_square_margin = 10  # For config
-    big_square_rect = Rect(big_square_margin, big_square_margin, screen_size - big_square_margin * 2,
-                           screen_size - big_square_margin * 2)
-    assert big_square_rect.width == big_square_rect.height  # It is a square
+
     # Calculate scaling factor
-    their_big_squares_size = 500
-    my_big_squares_size = big_square_rect.height
-    scaling_factor = my_big_squares_size / their_big_squares_size
-    assert their_big_squares_size * scaling_factor == my_big_squares_size
-    ##########################
-    their_big_squares_border_radius = 6
+    their_big_squares_size: Final = 500
+    big_square_size = screen_size - big_square_margin * 2
+    scaling_factor = big_square_size / their_big_squares_size
+    assert their_big_squares_size * scaling_factor == big_square_size
+
+    big_square_rect = Rect(big_square_margin, big_square_margin, big_square_size, big_square_size)
+    their_big_squares_border_radius: Final = 6
     big_square_border_radius = round(scaling_factor * their_big_squares_border_radius)
+
     # Their grid margin is the same as the distance between their tiles
     grid_margin = distance_between_tiles = scaling_factor * 15  # Their grid margin
     grid_margin += big_square_margin
     tile_size = scaling_factor * 107
     tile_distance = distance_between_tiles + tile_size
-    their_tile_border_radius = 3
+    their_tile_border_radius: Final = 3
     tile_border_radius = round(scaling_factor * their_tile_border_radius)
+
     # noinspection PyTypeChecker
     background_tile_grid: list[list[BackgroundTile]] = [
         [None, None, None, None],
@@ -110,6 +113,7 @@ def main(screen_size, frame_rate):  # Treat screen_size as final unless you MUST
                 x * tile_distance + grid_margin,
                 y * tile_distance + grid_margin,
                 tile_size, tile_size))
+
     foreground_tile_grid: list[list[ForegroundTile | None]] = [
         [None, None, None, None],
         [None, None, None, None],
@@ -117,10 +121,33 @@ def main(screen_size, frame_rate):  # Treat screen_size as final unless you MUST
         [None, None, None, None]
     ]
     for _ in range(2):  # Two starting tiles
-        ForegroundTile.add_one(foreground_tile_grid, background_tile_grid)
-    foreground_tile_slide_speed = (background_tile_grid[0][0].rect.left - background_tile_grid[3][0].rect.right) / (
-            (frame_rate / 1000) * ForegroundTile.longest_slide_time_in_mills
+        add_foreground_tile(foreground_tile_grid, background_tile_grid)
+
+    tile_slide_speed = (background_tile_grid[0][0].rect.left - background_tile_grid[3][0].rect.right) / (
+            (frame_rate / 1000) * longest_slide_time_in_mills)
+    return (
+        screen,
+        tile_border_radius,
+        foreground_tile_grid,
+        background_tile_grid,
+        tile_slide_speed,
+        big_square_rect,
+        big_square_border_radius,
+        frame_rate
     )
+
+
+def loop(
+        screen: pygame.Surface,
+        tile_border_radius,
+        foreground_tile_grid: list[list[ForegroundTile | None]],
+        background_tile_grid: list[list[BackgroundTile]],
+        tile_slide_speed,
+        big_square_rect,
+        big_square_border_radius,
+        frame_rate,
+):
+    clock = pygame.time.Clock()  # Special case
     while True:
         pygame.draw.rect(screen, Color("#bbada0"), big_square_rect, border_radius=big_square_border_radius)
         for e in background_tile_grid:
@@ -129,26 +156,29 @@ def main(screen_size, frame_rate):  # Treat screen_size as final unless you MUST
         for e in foreground_tile_grid:
             for v in e:
                 if v is not None:
-                    v.update(screen, tile_border_radius, background_tile_grid, foreground_tile_slide_speed)
-        # for event in pygame.event.get():
-        #     if event.type == QUIT:
-        #         return
-        #     elif event.type == KEYDOWN:
-        #         if event.key == K_UP or K_w:
-        #             pass
-        #         elif event.key == K_DOWN or K_s:
-        #             pass
-        #         elif event.key == K_LEFT or K_a:
-        #             pass
-        #         elif event.key == K_RIGHT or K_a:
-        #             pass
+                    v.update(screen, tile_border_radius, background_tile_grid, tile_slide_speed)
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                return
+            elif event.type == KEYDOWN:
+                if event.key == K_UP or K_w:
+                    pass
+                elif event.key == K_DOWN or K_s:
+                    pass
+                elif event.key == K_LEFT or K_a:
+                    pass
+                elif event.key == K_RIGHT or K_a:
+                    pass
         pygame.display.flip()
+        clock.tick(frame_rate)
+
+
+def main():
+    loop(*init(
+        screen_size=600,
+        frame_rate=24
+    ))
 
 
 if __name__ == '__main__':
-    main(600, 10)
-
-# Old test
-# surf = pygame.Surface((50, 50), flags=SRCALPHA)
-# pygame.draw.rect(surf, Color("#cdc1b4"), Rect(0, 0, 50, 50), border_radius=10)
-# screen.blit(surf, dest=(0, 0))
+    main()
