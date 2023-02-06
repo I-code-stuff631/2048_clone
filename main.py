@@ -23,6 +23,7 @@ import pygame
 from pygame.locals import *  # The "Prelude"
 from enum import Enum, auto
 import random as rand
+from typing import final, Final
 
 
 class Direction(Enum):
@@ -34,23 +35,28 @@ class Direction(Enum):
 
 class Tile:
     """2048 Tile"""
+    time_to_push_destination_in_mills = 100
+
     @classmethod
-    def init(cls, stop_positions: list[list], border_radius):
-        """Run this before actually creating an instance of the class"""
-        cls.STOP_POSITIONS = stop_positions
+    def init(cls, tile_grid, square_rect_grid, border_radius, /):  # Stop positions
+        """Run this before using this class or creating an instance of it"""
+        cls.tile_grid = tile_grid
+        cls.square_rect_grid = square_rect_grid
         cls.border_radius = border_radius
 
-    def __init__(self, rect):
+    def __init__(self, x, y: (int, int)):
         self._number = 2
-        self.moving = None
-        self.rect = rect
+        self._moving = None
+        self._rect = self.square_rect_grid[x][y].copy()
+        self._grid_position = (x, y)
 
     def push(self, direction: Direction):
-        self.moving = direction
+        self._moving = direction
 
-    def move(self):
-        match self.moving:
+    def _move(self):
+        match self._moving:
             case Direction.UP:
+                self._rect.move(10, 1)
                 pass
             case Direction.DOWN:
                 pass
@@ -58,9 +64,28 @@ class Tile:
                 pass
             case Direction.RIGHT:
                 pass
+            case None:
+                # Not moving
+                pass
 
     def draw(self, screen):
-        pygame.draw.rect(screen, Color(0, 0, 0), self.rect, border_radius=self.border_radius)
+        pygame.draw.rect(screen, Color(0, 0, 0), self._rect, border_radius=self.border_radius)
+
+    def update(self, screen):
+        self._move()
+        self.draw(screen)
+
+    # @classmethod
+    # def push_all(cls, direction: Direction):
+    #     cls.lambda_all(lambda tile: tile.push(direction))
+
+    @classmethod
+    def for_each(cls, lamb):
+        # noinspection PyUnresolvedReferences
+        for e in cls.tile_grid:
+            for tile in e:
+                if tile is not None:
+                    lamb(tile)
 
     # def increment_number(self):
     #     self._number *= 2
@@ -89,45 +114,55 @@ def main(screen_size):  # Treat screen_size as final unless you MUST do otherwis
     square_distance = distance_between_squares + square_size
     their_square_border_radius = 3  # For their background and forground squares
     square_border_radius = round(scaling_factor * their_square_border_radius)
-    background_square_rects: list[list] = [
+    # noinspection PyTypeChecker
+    square_rect_grid: Final[list[list[Rect]]] = [
         [None, None, None, None],
         [None, None, None, None],
         [None, None, None, None],
         [None, None, None, None]
-    ]  # Also doubles as the valid stop positions (that is why it is not just a list)
+    ]  # This may also double as stop positions later (that is why it is not just a list)
     for x in range(4):
         for y in range(4):
-            background_square_rects[x][y] =\
+            square_rect_grid[x][y] =\
                 Rect(x * square_distance + grid_margin,
                      y * square_distance + grid_margin,
                      square_size, square_size)
-    Tile.init(background_square_rects, square_border_radius)
-    tiles: list[list[Tile | None]] = [
+    tile_grid: list[list[Tile | None]] = [
         [None, None, None, None],
         [None, None, None, None],
         [None, None, None, None],
         [None, None, None, None]
     ]
-    for _ in range(2):
+    Tile.init(tile_grid, square_rect_grid, square_border_radius)
+    for _ in range(2):  # Two starting tiles
         x, y = rand.randrange(4), rand.randrange(4)
-        tiles[x][y] = Tile(background_square_rects[x][y].copy())
+        tile_grid[x][y] = Tile(x, y)
     while True:
         pygame.draw.rect(screen, Color("#bbada0"), big_square_rect, border_radius=big_square_border_radius)
-        for x in background_square_rects:
-            for rect in x:
+        for e in square_rect_grid:
+            for rect in e:
                 pygame.draw.rect(screen, Color("#cdc1b4"), rect, border_radius=square_border_radius)
+        Tile.for_each(lambda tile: tile.update(screen))
+        # for e in tile_grid:
+        #     for tile in e:
+        #         if tile is not None:
+        #             tile.update(screen)
         for event in pygame.event.get():
             if event.type == QUIT:
                 return
             elif event.type == KEYDOWN:
                 if event.key == K_UP or K_w:
-                    pass
+                    Tile.for_each(lambda tile: tile.push(Direction.UP))
+                    # Tile.push_all(Direction.UP)
                 elif event.key == K_DOWN or K_s:
-                    pass
+                    Tile.for_each(lambda tile: tile.push(Direction.DOWN))
+                    # Tile.push_all(Direction.DOWN)
                 elif event.key == K_LEFT or K_a:
-                    pass
+                    Tile.for_each(lambda tile: tile.push(Direction.LEFT))
+                    # Tile.push_all(Direction.LEFT)
                 elif event.key == K_RIGHT or K_a:
-                    pass
+                    Tile.for_each(lambda tile: tile.push(Direction.RIGHT))
+                    # Tile.push_all(Direction.RIGHT)
         pygame.display.flip()
 
 
