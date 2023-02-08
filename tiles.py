@@ -59,6 +59,9 @@ class ForegroundTile:
             # Stop sliding if there is another tile blocking the way or there is nowhere to go.
             # Needs to happen before the tile is moved in case it actually can't move
             try:
+                # No negative indexing!
+                if next_grid_position[0] < 0 or next_grid_position[1] < 0:
+                    raise IndexError
                 # noinspection PyTypeChecker
                 next_tile: ForegroundTile = foreground_tile_grid[next_grid_position[0]][next_grid_position[1]]
                 if next_tile is not None and next_tile.value != self.value:

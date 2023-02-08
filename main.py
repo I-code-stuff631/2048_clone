@@ -8,17 +8,18 @@ import logging as log
 
 def add_foreground_tile(
         foreground_tile_grid: list[list[ForegroundTile | None]],
+        foreground_tiles: list[ForegroundTile],
         background_tile_grid: list[list[BackgroundTile]]
 ):
-    free_grid_positions = []
-    for x, e in enumerate(foreground_tile_grid):
-        for y, v in enumerate(e):
+    unoccupied_positions = []
+    for x, i in enumerate(foreground_tile_grid):
+        for y, v in enumerate(i):
             if v is None:
-                free_grid_positions.append((x, y))
-    x, y = random.choice(free_grid_positions)
+                unoccupied_positions.append((x, y))
+    x, y = random.choice(unoccupied_positions)
     tile = ForegroundTile(background_tile_grid[x][y].rect, (x, y))
     foreground_tile_grid[x][y] = tile
-    return tile
+    foreground_tiles.append(tile)
 
 
 def init(*, screen_size, frame_rate, big_square_margin=10, longest_slide_time_in_mills=100):  # Treat screen_size as
@@ -82,11 +83,10 @@ def init(*, screen_size, frame_rate, big_square_margin=10, longest_slide_time_in
     ]
     foreground_tiles: list[ForegroundTile] = []
     for _ in range(2):  # Two starting tiles
-        foreground_tiles.append(add_foreground_tile(foreground_tile_grid, background_tile_grid))
+        add_foreground_tile(foreground_tile_grid, foreground_tiles, background_tile_grid)
 
-    slide_speed = (background_tile_rect_grid[3][0].right - background_tile_rect_grid[0][0].left) / \
-                  ((frame_rate / 1000) * longest_slide_time_in_mills)
-    slide_speed = 10
+    slide_speed = (background_tile_rect_grid[3][0].left - background_tile_rect_grid[0][0].left) / \
+                  (frame_rate * (longest_slide_time_in_mills / 1000))
     assert slide_speed > 0
 
     font = pygame.font.SysFont(["Clear Sans", "Helvetica Neue", "Arial", "sans-serif"], round(scaling_factor * 55),
