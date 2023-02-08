@@ -88,6 +88,9 @@ def init(*, screen_size, frame_rate, big_square_margin=10, longest_slide_time_in
                   ((frame_rate / 1000) * longest_slide_time_in_mills)
     slide_speed = 10
     assert slide_speed > 0
+
+    font = pygame.font.SysFont(["Clear Sans", "Helvetica Neue", "Arial", "sans-serif"], round(scaling_factor * 55),
+                               bold=True)
     return (
         screen,
         tile_border_radius,
@@ -98,7 +101,8 @@ def init(*, screen_size, frame_rate, big_square_margin=10, longest_slide_time_in
         slide_speed,
         big_square_rect,
         big_square_border_radius,
-        frame_rate
+        frame_rate,
+        font,
     )
 
 
@@ -113,6 +117,7 @@ def loop(
         big_square_rect,
         big_square_border_radius,
         frame_rate,
+        font,
 ):
     clock = pygame.time.Clock()  # Special case
     while True:
@@ -121,8 +126,8 @@ def loop(
             for bg_tile in i:
                 bg_tile.draw(screen, tile_border_radius)
         for fg_tile in foreground_tiles:
-            fg_tile.move(background_tile_rect_grid, foreground_tile_grid, slide_speed)
-            fg_tile.draw(screen, tile_border_radius)
+            fg_tile.move(background_tile_rect_grid, foreground_tile_grid, foreground_tiles, slide_speed)
+            fg_tile.draw(screen, tile_border_radius, font)
         for event in pygame.event.get():
             if event.type == QUIT:
                 return
@@ -130,8 +135,14 @@ def loop(
                 log.debug("Key pressed")
 
                 def push_all(direction: Direction):
+                    tile_sliding = False
                     for tile in foreground_tiles:
-                        tile.push(direction, foreground_tile_grid)
+                        if tile.is_sliding():
+                            tile_sliding = True
+                            break
+                    if not tile_sliding:
+                        for tile in foreground_tiles:  # Push all tiles
+                            tile.push(direction, foreground_tile_grid)
                 if event.key == K_UP or event.key == K_w:
                     log.debug("Up")
                     push_all(Direction.UP)
@@ -149,10 +160,11 @@ def loop(
 
 
 def main():
-    log.basicConfig(level=0,)
+    log.basicConfig(level=log.DEBUG)
     loop(*init(
         screen_size=600,
-        frame_rate=24
+        frame_rate=24,
+        longest_slide_time_in_mills=1000,
     ))
 
 
