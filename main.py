@@ -125,9 +125,6 @@ def loop(
         for i in background_tile_grid:
             for bg_tile in i:
                 bg_tile.draw(screen, tile_border_radius)
-        for fg_tile in foreground_tiles:
-            fg_tile.move(background_tile_rect_grid, foreground_tile_grid, foreground_tiles, slide_speed)
-            fg_tile.draw(screen, tile_border_radius, font)
         for event in pygame.event.get():
             if event.type == QUIT:
                 return
@@ -136,13 +133,25 @@ def loop(
 
                 def push_all(direction: Direction):
                     tile_sliding = False
+                    # noinspection PyShadowingNames
                     for tile in foreground_tiles:
                         if tile.is_sliding():
                             tile_sliding = True
                             break
                     if not tile_sliding:
+                        # noinspection PyShadowingNames
                         for tile in foreground_tiles:  # Push all tiles
                             tile.push(direction, foreground_tile_grid)
+                        # Sort it so that the move method is called on the tiles in the proper order
+                        match direction:
+                            case Direction.UP:
+                                foreground_tiles.sort(key=lambda t: t._grid_position[1])  # Least to greatest
+                            case Direction.DOWN:
+                                foreground_tiles.sort(key=lambda t: t._grid_position[1], reverse=True)
+                            case Direction.LEFT:
+                                foreground_tiles.sort(key=lambda t: t._grid_position[0])
+                            case Direction.RIGHT:
+                                foreground_tiles.sort(key=lambda t: t._grid_position[0], reverse=True)
                 if event.key == K_UP or event.key == K_w:
                     log.debug("Up")
                     push_all(Direction.UP)
@@ -155,6 +164,26 @@ def loop(
                 elif event.key == K_RIGHT or event.key == K_d:
                     log.debug("Right")
                     push_all(Direction.RIGHT)
+            elif True and event.type == MOUSEBUTTONUP:
+                for x, e in enumerate(background_tile_rect_grid):
+                    for y, r in enumerate(e):
+                        if r.collidepoint(event.pos):
+                            match event.button:
+                                case 1:
+                                    if foreground_tile_grid[x][y] is None:
+                                        tile = ForegroundTile(background_tile_grid[x][y].rect, (x, y))
+                                        foreground_tile_grid[x][y] = tile
+                                        foreground_tiles.append(tile)
+                                case 2:
+                                    print(x, y)
+                                case 3:
+                                    tile = foreground_tile_grid[x][y]
+                                    if tile is not None:
+                                        foreground_tiles.remove(tile)
+                                    foreground_tile_grid[x][y] = None
+        for fg_tile in foreground_tiles:
+            fg_tile.draw(screen, tile_border_radius, font)
+            fg_tile.move(background_tile_rect_grid, foreground_tile_grid, foreground_tiles, slide_speed)
         pygame.display.flip()
         clock.tick(frame_rate)
 
