@@ -22,7 +22,7 @@ def add_foreground_tile(
     foreground_tiles.append(tile)
 
 
-def init(*, screen_size, frame_rate, big_square_margin=10, longest_slide_time_in_mills=100):  # Treat screen_size as
+def init(*, screen_size, frame_rate, big_square_margin=10):  # Treat screen_size as
     # final unless you MUST do otherwise (trust me)
     """
     Initlization code (code run before the loop)
@@ -85,10 +85,6 @@ def init(*, screen_size, frame_rate, big_square_margin=10, longest_slide_time_in
     for _ in range(2):  # Two starting tiles
         add_foreground_tile(foreground_tile_grid, foreground_tiles, background_tile_grid)
 
-    slide_speed = (background_tile_rect_grid[3][0].left - background_tile_rect_grid[0][0].left) / \
-                  (frame_rate * (longest_slide_time_in_mills / 1000))
-    assert slide_speed > 0
-
     font = pygame.font.SysFont(["Clear Sans", "Helvetica Neue", "Arial", "sans-serif"], round(scaling_factor * 55),
                                bold=True)
     return (
@@ -98,7 +94,6 @@ def init(*, screen_size, frame_rate, big_square_margin=10, longest_slide_time_in
         foreground_tiles,
         background_tile_grid,
         background_tile_rect_grid,
-        slide_speed,
         big_square_rect,
         big_square_border_radius,
         frame_rate,
@@ -113,7 +108,6 @@ def loop(
         foreground_tiles: list[ForegroundTile],
         background_tile_grid: list[list[BackgroundTile]],
         background_tile_rect_grid: list[list[Rect]],
-        slide_speed,
         big_square_rect,
         big_square_border_radius,
         frame_rate,
@@ -141,17 +135,17 @@ def loop(
                     if not tile_sliding:
                         # noinspection PyShadowingNames
                         for tile in foreground_tiles:  # Push all tiles
-                            tile.push(direction, foreground_tile_grid)
+                            tile.push(direction, foreground_tile_grid, background_tile_rect_grid, frame_rate)
                         # Sort it so that the move method is called on the tiles in the proper order
                         match direction:
                             case Direction.UP:
-                                foreground_tiles.sort(key=lambda t: t._grid_position[1])  # Least to greatest
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[1])  # Least to greatest
                             case Direction.DOWN:
-                                foreground_tiles.sort(key=lambda t: t._grid_position[1], reverse=True)
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[1], reverse=True)
                             case Direction.LEFT:
-                                foreground_tiles.sort(key=lambda t: t._grid_position[0])
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[0])
                             case Direction.RIGHT:
-                                foreground_tiles.sort(key=lambda t: t._grid_position[0], reverse=True)
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[0], reverse=True)
                 if event.key == K_UP or event.key == K_w:
                     log.debug("Up")
                     push_all(Direction.UP)
@@ -183,7 +177,7 @@ def loop(
                                     foreground_tile_grid[x][y] = None
         for fg_tile in foreground_tiles:
             fg_tile.draw(screen, tile_border_radius, font)
-            fg_tile.move(background_tile_rect_grid, foreground_tile_grid, foreground_tiles, slide_speed)
+            fg_tile.move(background_tile_rect_grid, foreground_tile_grid, foreground_tiles)
         pygame.display.flip()
         clock.tick(frame_rate)
 
@@ -193,7 +187,6 @@ def main():
     loop(*init(
         screen_size=600,
         frame_rate=24,
-        longest_slide_time_in_mills=1000,
     ))
 
 
