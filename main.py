@@ -113,6 +113,7 @@ def loop(
         frame_rate,
         font,
 ):
+    tiles_are_sliding = False  # Should be accurate after the tiles have moved for the first time
     clock = pygame.time.Clock()  # Special case
     while True:
         pygame.draw.rect(screen, Color("#bbada0"), big_square_rect, border_radius=big_square_border_radius)
@@ -127,14 +128,7 @@ def loop(
 
                 def push_all_none_sliding(direction: Direction):
                     """Pushes all tiles in the spesfied direction if none are currently sliding"""
-                    tile_sliding = False
-                    # noinspection PyShadowingNames
-                    for tile in foreground_tiles:
-                        if tile.is_sliding():
-                            tile_sliding = True
-                            break
-
-                    if not tile_sliding:
+                    if not tiles_are_sliding:
                         # Sort it so that the push() method is called on the tiles in the proper order
                         match direction:
                             case Direction.UP:
@@ -188,6 +182,18 @@ def loop(
         for fg_tile in for_removal:
             foreground_tiles.remove(fg_tile)
         for_removal.clear()
+
+        tile_sliding = False
+        # noinspection PyShadowingNames
+        for tile in reversed(foreground_tiles):  # << The tiles at the begining of the list are closest to the edge in
+            # the direction of movment and therefore are more likley to not be sliding
+            if tile.is_sliding():
+                tile_sliding = True
+                break
+        if not tile_sliding and tiles_are_sliding:  # Tiles were just sliding
+            add_foreground_tile(foreground_tile_grid, foreground_tiles, background_tile_grid)
+        tiles_are_sliding = tile_sliding
+
         pygame.display.flip()
         clock.tick(frame_rate)
 

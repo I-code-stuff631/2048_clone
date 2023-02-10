@@ -31,7 +31,7 @@ class Direction(Enum):
 
 
 class ForegroundTile:
-    _time_to_destination = .5  # In seconds
+    _time_to_destination = .1  # In seconds
 
     def __init__(self, rect: Rect, grid_position: (int, int)):
         self.value = 2
@@ -100,7 +100,7 @@ class ForegroundTile:
         number_of_tiles += math.floor(tiles_in_row / 2)
         assert 0 <= number_of_tiles <= 3
 
-        self._slide_speed = round(
+        self._slide_speed = math.ceil(
             (background_tile_rect_grid[number_of_tiles][0].left - background_tile_rect_grid[0][0].left) /
             (frame_rate * self._time_to_destination)
         )
