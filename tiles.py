@@ -115,7 +115,6 @@ class ForegroundTile:
             self,
             background_tile_rect_grid: list[list[Rect]],
             foreground_tile_grid: list[list],
-            foreground_tiles: list,
     ):
         if self._sliding is not None:
             next_grid_position = (self._grid_position[0] + self._sliding.value[0]), \
@@ -126,7 +125,7 @@ class ForegroundTile:
                 tile_under: ForegroundTile = foreground_tile_grid[self._grid_position[0]][self._grid_position[1]]
                 if tile_under is not None:
                     tile_under.value += self.value
-                    foreground_tiles.remove(self)
+                    return True  # Put the tile up for removal
                 else:
                     self._sliding = None
                     self._rect = background_tile_rect_grid[self._grid_position[0]][self._grid_position[1]].copy()
@@ -142,11 +141,9 @@ class ForegroundTile:
                 # noinspection PyTypeChecker
                 next_tile: ForegroundTile = foreground_tile_grid[next_grid_position[0]][next_grid_position[1]]
                 if next_tile is not None and next_tile.value != self.value:
-                    stop()
-                    return
+                    return stop()
             except IndexError:
-                stop()
-                return
+                return stop()
 
             self._rect.move_ip(self._slide_speed * self._sliding.value[0], self._slide_speed * self._sliding.value[1])
             next_bg_tile_rect = background_tile_rect_grid[next_grid_position[0]][next_grid_position[1]]

@@ -133,12 +133,12 @@ def loop(
                             tile_sliding = True
                             break
                     if not tile_sliding:
-                        # Should be proper order for pushing
+                        # Sort it so that the push() method is called on the tiles in the proper order
                         match direction:
                             case Direction.UP:
                                 foreground_tiles.sort(key=lambda t: t.get_grid_position()[1], reverse=True)
                             case Direction.DOWN:
-                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[1])
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[1])  # Least to greatest
                             case Direction.LEFT:
                                 foreground_tiles.sort(key=lambda t: t.get_grid_position()[0], reverse=True)
                             case Direction.RIGHT:
@@ -146,16 +146,7 @@ def loop(
                         # noinspection PyShadowingNames
                         for tile in foreground_tiles:  # Push all tiles
                             tile.push(direction, foreground_tile_grid, background_tile_rect_grid, frame_rate)
-                        # Sort it so that the move method is called on the tiles in the proper order
-                        match direction:
-                            case Direction.UP:
-                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[1])  # Least to greatest
-                            case Direction.DOWN:
-                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[1], reverse=True)
-                            case Direction.LEFT:
-                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[0])
-                            case Direction.RIGHT:
-                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[0], reverse=True)
+                        foreground_tiles.reverse()  # For the move() method
                 if event.key == K_UP or event.key == K_w:
                     log.debug("Up")
                     push_all(Direction.UP)
@@ -185,9 +176,14 @@ def loop(
                                     if tile is not None:
                                         foreground_tiles.remove(tile)
                                     foreground_tile_grid[x][y] = None
+        for_removal = []
         for fg_tile in foreground_tiles:
             fg_tile.draw(screen, tile_border_radius, font)
-            fg_tile.move(background_tile_rect_grid, foreground_tile_grid, foreground_tiles)
+            if fg_tile.move(background_tile_rect_grid, foreground_tile_grid):  # Tile was put up for removal
+                for_removal.append(fg_tile)
+        for fg_tile in for_removal:
+            foreground_tiles.remove(fg_tile)
+        for_removal.clear()
         pygame.display.flip()
         clock.tick(frame_rate)
 
