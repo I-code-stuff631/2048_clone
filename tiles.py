@@ -1,6 +1,7 @@
 import pygame
 from pygame.locals import *
 from enum import Enum
+import math
 
 
 class BackgroundTile:
@@ -30,7 +31,7 @@ class Direction(Enum):
 
 
 class ForegroundTile:
-    _time_to_destination_in_mills = 1000
+    _time_to_destination = .5  # In seconds
 
     def __init__(self, rect: Rect, grid_position: (int, int)):
         self.value = 2
@@ -76,23 +77,33 @@ class ForegroundTile:
                             break
                 else:
                     for x in range(1, 4):
+                        assert self._grid_position[0] >= 0
                         try:
                             tiles_of_interest.append(
                                 foreground_tile_grid[self._grid_position[0] + x][self._grid_position[1]]
                             )
-                        except IndexError:  # At edge
+                        except IndexError:
                             break
         number_of_tiles = 0
+        tiles_in_row = 1  # << Counting self
+        value_of_tiles_in_row = self.value
         for tile in tiles_of_interest:
             tile: ForegroundTile
             if tile is None:
                 number_of_tiles += 1
-            elif tile.value == self.value:
-                number_of_tiles += 1
+            elif tile.value == value_of_tiles_in_row:
+                tiles_in_row += 1
+            else:  # tile.value != self.value
+                number_of_tiles += math.floor(tiles_in_row / 2)
+                tiles_in_row = 1  # << The current tile
+                value_of_tiles_in_row = tile.value
+        number_of_tiles += math.floor(tiles_in_row / 2)
         assert 0 <= number_of_tiles <= 3
 
-        self._slide_speed = (background_tile_rect_grid[number_of_tiles][0].left - background_tile_rect_grid[0][0].left) / \
-                            (frame_rate * (self._time_to_destination_in_mills / 1000))
+        self._slide_speed = round(
+            (background_tile_rect_grid[number_of_tiles][0].left - background_tile_rect_grid[0][0].left) /
+            (frame_rate * self._time_to_destination)
+        )
         assert self._slide_speed >= 0
 
         if self._slide_speed != 0:
@@ -106,7 +117,6 @@ class ForegroundTile:
             foreground_tile_grid: list[list],
             foreground_tiles: list,
     ):
-        """Call before draw"""
         if self._sliding is not None:
             next_grid_position = (self._grid_position[0] + self._sliding.value[0]), \
                 (self._grid_position[1] + self._sliding.value[1])

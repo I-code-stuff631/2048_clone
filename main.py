@@ -133,6 +133,16 @@ def loop(
                             tile_sliding = True
                             break
                     if not tile_sliding:
+                        # Should be proper order for pushing
+                        match direction:
+                            case Direction.UP:
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[1], reverse=True)
+                            case Direction.DOWN:
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[1])
+                            case Direction.LEFT:
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[0], reverse=True)
+                            case Direction.RIGHT:
+                                foreground_tiles.sort(key=lambda t: t.get_grid_position()[0])
                         # noinspection PyShadowingNames
                         for tile in foreground_tiles:  # Push all tiles
                             tile.push(direction, foreground_tile_grid, background_tile_rect_grid, frame_rate)
@@ -186,7 +196,7 @@ def main():
     log.basicConfig(level=log.DEBUG)
     loop(*init(
         screen_size=600,
-        frame_rate=24,
+        frame_rate=60,
     ))
 
 
