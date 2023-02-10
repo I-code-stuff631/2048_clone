@@ -125,13 +125,15 @@ def loop(
             elif event.type == KEYDOWN:
                 log.debug("Key pressed")
 
-                def push_all(direction: Direction):
+                def push_all_none_sliding(direction: Direction):
+                    """Pushes all tiles in the spesfied direction if none are currently sliding"""
                     tile_sliding = False
                     # noinspection PyShadowingNames
                     for tile in foreground_tiles:
                         if tile.is_sliding():
                             tile_sliding = True
                             break
+
                     if not tile_sliding:
                         # Sort it so that the push() method is called on the tiles in the proper order
                         match direction:
@@ -143,22 +145,24 @@ def loop(
                                 foreground_tiles.sort(key=lambda t: t.get_grid_position()[0], reverse=True)
                             case Direction.RIGHT:
                                 foreground_tiles.sort(key=lambda t: t.get_grid_position()[0])
+
                         # noinspection PyShadowingNames
                         for tile in foreground_tiles:  # Push all tiles
                             tile.push(direction, foreground_tile_grid, background_tile_rect_grid, frame_rate)
-                        foreground_tiles.reverse()  # For the move() method
+
+                        foreground_tiles.reverse()  # Reverse for the move() method
                 if event.key == K_UP or event.key == K_w:
                     log.debug("Up")
-                    push_all(Direction.UP)
+                    push_all_none_sliding(Direction.UP)
                 elif event.key == K_DOWN or event.key == K_s:
                     log.debug("Down")
-                    push_all(Direction.DOWN)
+                    push_all_none_sliding(Direction.DOWN)
                 elif event.key == K_LEFT or event.key == K_a:
                     log.debug("Left")
-                    push_all(Direction.LEFT)
+                    push_all_none_sliding(Direction.LEFT)
                 elif event.key == K_RIGHT or event.key == K_d:
                     log.debug("Right")
-                    push_all(Direction.RIGHT)
+                    push_all_none_sliding(Direction.RIGHT)
             elif True and event.type == MOUSEBUTTONUP:
                 for x, e in enumerate(background_tile_rect_grid):
                     for y, r in enumerate(e):
