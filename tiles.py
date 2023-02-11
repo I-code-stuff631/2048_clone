@@ -15,14 +15,6 @@ class BackgroundTile:
         pygame.draw.rect(screen, self.color, self.rect, border_radius=border_radius)
 
 
-class PList(list):
-    """PositiveList"""
-    def __getitem__(self, index):
-        if index < 0:
-            raise IndexError(F"Expected a positive index, instead got {index}")
-        return super().__getitem__(index)
-
-
 class Direction(Enum):
     UP = (0, -1)
     DOWN = (0, 1)
@@ -47,53 +39,37 @@ class ForegroundTile:
             background_tile_rect_grid: list[list[Rect]],
             frame_rate,
     ):
+        # Get tiles in the path of movment
+        tiles_in_path = []
+        next_grid_position = (
+            self._grid_position[0] + direction.value[0],
+            self._grid_position[1] + direction.value[1]
+        )
+        while True:
+            try:
+                if next_grid_position[0] < 0 or next_grid_position[1] < 0:  # Would negatively index
+                    break
+                tiles_in_path.append(foreground_tile_grid[next_grid_position[0]][next_grid_position[1]])
+            except IndexError:
+                break
+            else:
+                next_grid_position = (
+                    next_grid_position[0] + direction.value[0],
+                    next_grid_position[1] + direction.value[1]
+                )
+
         # Predict number of tiles this will move (the conquence for perdiction this not being correct is the tiles
         # snapping more or otherwise having a werid speed, the game should still work)
-        tiles_of_interest = []
-        match direction:
-            case Direction.UP | Direction.DOWN as up_or_down:
-                row = PList(foreground_tile_grid[self._grid_position[0]])
-                if up_or_down == Direction.UP:
-                    for y in range(1, 4):
-                        try:
-                            tiles_of_interest.append(row[self._grid_position[1] - y])
-                        except IndexError:  # At edge
-                            break
-                else:
-                    for y in range(1, 4):
-                        try:
-                            tiles_of_interest.append(row[self._grid_position[1] + y])
-                        except IndexError:
-                            break
-            case Direction.LEFT | Direction.RIGHT as left_or_right:
-                if left_or_right == Direction.LEFT:
-                    for x in range(1, 4):
-                        try:
-                            index = self._grid_position[0] - x
-                            if index < 0:
-                                raise IndexError
-                            tiles_of_interest.append(foreground_tile_grid[index][self._grid_position[1]])
-                        except IndexError:  # At edge
-                            break
-                else:
-                    for x in range(1, 4):
-                        assert self._grid_position[0] >= 0
-                        try:
-                            tiles_of_interest.append(
-                                foreground_tile_grid[self._grid_position[0] + x][self._grid_position[1]]
-                            )
-                        except IndexError:
-                            break
         number_of_tiles = 0
         tiles_in_row = 1  # << Counting self
         value_of_tiles_in_row = self.value
-        for tile in tiles_of_interest:
+        for tile in tiles_in_path:
             tile: ForegroundTile
             if tile is None:
                 number_of_tiles += 1
             elif tile.value == value_of_tiles_in_row:
                 tiles_in_row += 1
-            else:  # tile.value != self.value
+            else:  # tile.value != value_of_tiles_in_row
                 number_of_tiles += math.floor(tiles_in_row / 2)
                 tiles_in_row = 1  # << The current tile
                 value_of_tiles_in_row = tile.value
@@ -117,8 +93,10 @@ class ForegroundTile:
             foreground_tile_grid: list[list],
     ):
         if self._sliding is not None:
-            next_grid_position = (self._grid_position[0] + self._sliding.value[0]), \
-                (self._grid_position[1] + self._sliding.value[1])
+            next_grid_position = (
+                self._grid_position[0] + self._sliding.value[0],
+                self._grid_position[1] + self._sliding.value[1]
+            )
 
             def stop():
                 # noinspection PyTypeChecker

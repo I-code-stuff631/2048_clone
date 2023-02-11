@@ -183,13 +183,11 @@ def loop(
             foreground_tiles.remove(fg_tile)
         for_removal.clear()
 
-        tile_sliding = False
-        # noinspection PyShadowingNames
-        for tile in reversed(foreground_tiles):  # << The tiles at the begining of the list are closest to the edge in
-            # the direction of movment and therefore are more likley to not be sliding
-            if tile.is_sliding():
-                tile_sliding = True
-                break
+        tile_sliding = any(
+            tile.is_sliding() for tile in
+            reversed(foreground_tiles)  # << The tiles at the end of the list are farthest from the edge in the
+            # direction of movment and therefore are most likley to be sliding
+        )
         if not tile_sliding and tiles_are_sliding:  # Tiles were just sliding
             add_foreground_tile(foreground_tile_grid, foreground_tiles, background_tile_grid)
         tiles_are_sliding = tile_sliding
