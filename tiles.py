@@ -22,11 +22,47 @@ class Direction(Enum):
     RIGHT = (1, 0)
 
 
+def rainbow_color(num: int, /) -> Color:
+    """Returns a color from a spectrum starting at red (0) and ending at purple (1275)"""
+    if num <= 255:
+        return Color(255, num, 0)
+    elif num <= 255 * 2:
+        num -= 255
+        return Color(255 - num, 255, 0)
+    elif num <= 255 * 3:
+        num -= 255 * 2
+        return Color(0, 255, num)
+    elif num <= 255 * 4:
+        num -= 255 * 3
+        return Color(0, 255 - num, 255)
+    elif num <= 255 * 5:
+        num -= 255 * 4
+        return Color(num, 0, 255)
+    else:
+        raise ValueError("Number is beyond the maximum")
+
+
 class ForegroundTile:
     _time_to_destination = .1  # In seconds
+    __BASE_COLOR = Color("#eee4da")
+    # __BASE_TEXT_COLOR = Color("#776e65")
+    # _COLORS = [__BASE_COLOR]
+    # for x in range(10):  # 0 - 9 (10 colors)
+    #     color = rainbow_color(
+    #         (1275 // 9) * x
+    #     )
+    #     _COLORS.append(__BASE_COLOR.lerp(color, .2))
+    # del color
+    _COLORS = []
+    for x in range(11):  # 0 - 10 (11 colors)
+        color = rainbow_color(
+            (1275 // 10) * x
+        )
+        _COLORS.append(__BASE_COLOR.lerp(color, .15))  # .2
+    del color
 
-    def __init__(self, rect: Rect, grid_position: (int, int)):
-        self.value = 2
+    def __init__(self, value: int, rect: Rect, grid_position: (int, int)):
+        self.value = value
         self._sliding = None
         self._rect = rect.copy()
         self._grid_position = grid_position
@@ -102,7 +138,7 @@ class ForegroundTile:
                 # noinspection PyTypeChecker
                 tile_under: ForegroundTile = foreground_tile_grid[self._grid_position[0]][self._grid_position[1]]
                 if tile_under is not None:
-                    tile_under.value += self.value
+                    tile_under._merge(self)
                     return True  # Put the tile up for removal
                 else:
                     self._sliding = None
@@ -141,9 +177,16 @@ class ForegroundTile:
                     if self._rect.right >= next_bg_tile_rect.right:
                         self._grid_position = next_grid_position
 
+    def _merge(self, other):
+        """The passed in tile needs to be removed after calling this"""
+        other: ForegroundTile
+        assert self.value == other.value
+        self.value += other.value
+
     def draw(self, screen, border_radius, font: pygame.font.Font):
-        pygame.draw.rect(screen, Color("#eee4da"), self._rect, border_radius=border_radius)
-        text = font.render(str(self.value), True, Color("#776e65"))
+        color = self._COLORS[round(math.log2(self.value)) - 1]
+        pygame.draw.rect(screen, color, self._rect, border_radius=border_radius)
+        text = font.render(str(self.value), True, Color(255 - color.r, 255 - color.g, 255 - color.b))
         screen.blit(text, text.get_rect(center=self._rect.center))
 
     def is_sliding(self):

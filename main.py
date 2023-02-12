@@ -17,7 +17,7 @@ def add_foreground_tile(
             if v is None:
                 unoccupied_positions.append((x, y))
     x, y = random.choice(unoccupied_positions)
-    tile = ForegroundTile(background_tile_grid[x][y].rect, (x, y))
+    tile = ForegroundTile(2 if random.random() < 0.9 else 4, background_tile_grid[x][y].rect, (x, y))
     foreground_tile_grid[x][y] = tile
     foreground_tiles.append(tile)
 
@@ -120,6 +120,7 @@ def loop(
         for i in background_tile_grid:
             for bg_tile in i:
                 bg_tile.draw(screen, tile_border_radius)
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 return
@@ -157,7 +158,7 @@ def loop(
                 elif event.key == K_RIGHT or event.key == K_d:
                     log.debug("Right")
                     push_all_none_sliding(Direction.RIGHT)
-            elif True and event.type == MOUSEBUTTONUP:
+            elif False and event.type == MOUSEBUTTONUP:
                 for x, e in enumerate(background_tile_rect_grid):
                     for y, r in enumerate(e):
                         if r.collidepoint(event.pos):
@@ -174,6 +175,7 @@ def loop(
                                     if tile is not None:
                                         foreground_tiles.remove(tile)
                                     foreground_tile_grid[x][y] = None
+
         for_removal = []
         for fg_tile in foreground_tiles:
             fg_tile.draw(screen, tile_border_radius, font)
