@@ -44,29 +44,24 @@ def rainbow_color(num: int, /) -> Color:
 
 class ForegroundTile:
     _time_to_destination = .1  # In seconds
-    __BASE_COLOR = Color("#eee4da")
+    _COLORS = [
+        Color("#eee4da").lerp(rainbow_color((1275 // 10) * x), .15)
+        for x in range(11)  # 0 - 10
+    ]  # (11 colors)
     # __BASE_TEXT_COLOR = Color("#776e65")
-    # _COLORS = [__BASE_COLOR]
-    # for x in range(10):  # 0 - 9 (10 colors)
-    #     color = rainbow_color(
-    #         (1275 // 9) * x
-    #     )
-    #     _COLORS.append(__BASE_COLOR.lerp(color, .2))
-    # del color
-    _COLORS = []
-    for x in range(11):  # 0 - 10 (11 colors)
-        color = rainbow_color(
-            (1275 // 10) * x
-        )
-        _COLORS.append(__BASE_COLOR.lerp(color, .15))  # .2
-    del color
 
     def __init__(self, value: int, rect: Rect, grid_position: (int, int)):
-        self.value = value
+        self._value = value
         self._sliding = None
         self._rect = rect.copy()
         self._grid_position = grid_position
         self._slide_speed = None
+        self._update_color()
+
+    def _update_color(self):
+        """Updates the tiles color based on its current value"""
+        self._color = self._COLORS[round(math.log2(self._value)) - 1]
+        self._text_color = Color(255 - self._color.r, 255 - self._color.g, 255 - self._color.b)
 
     def push(
             self,
@@ -98,17 +93,17 @@ class ForegroundTile:
         # snapping more or otherwise having a werid speed, the game should still work)
         number_of_tiles = 0
         tiles_in_row = 1  # << Counting self
-        value_of_tiles_in_row = self.value
+        value_of_tiles_in_row = self._value
         for tile in tiles_in_path:
             tile: ForegroundTile
             if tile is None:
                 number_of_tiles += 1
-            elif tile.value == value_of_tiles_in_row:
+            elif tile._value == value_of_tiles_in_row:
                 tiles_in_row += 1
             else:  # tile.value != value_of_tiles_in_row
                 number_of_tiles += math.floor(tiles_in_row / 2)
                 tiles_in_row = 1  # << The current tile
-                value_of_tiles_in_row = tile.value
+                value_of_tiles_in_row = tile._value
         number_of_tiles += math.floor(tiles_in_row / 2)
         assert 0 <= number_of_tiles <= 3
 
@@ -154,7 +149,7 @@ class ForegroundTile:
                     raise IndexError
                 # noinspection PyTypeChecker
                 next_tile: ForegroundTile = foreground_tile_grid[next_grid_position[0]][next_grid_position[1]]
-                if next_tile is not None and next_tile.value != self.value:
+                if next_tile is not None and next_tile._value != self._value:
                     return stop()
             except IndexError:
                 return stop()
@@ -180,13 +175,13 @@ class ForegroundTile:
     def _merge(self, other):
         """The passed in tile needs to be removed after calling this"""
         other: ForegroundTile
-        assert self.value == other.value
-        self.value += other.value
+        assert self._value == other._value
+        self._value += other._value
+        self._update_color()
 
     def draw(self, screen, border_radius, font: pygame.font.Font):
-        color = self._COLORS[round(math.log2(self.value)) - 1]
-        pygame.draw.rect(screen, color, self._rect, border_radius=border_radius)
-        text = font.render(str(self.value), True, Color(255 - color.r, 255 - color.g, 255 - color.b))
+        pygame.draw.rect(screen, self._color, self._rect, border_radius=border_radius)
+        text = font.render(str(self._value), True, self._text_color)
         screen.blit(text, text.get_rect(center=self._rect.center))
 
     def is_sliding(self):

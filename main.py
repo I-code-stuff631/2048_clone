@@ -5,6 +5,8 @@ from typing import Final
 from tiles import ForegroundTile, BackgroundTile, Direction
 import logging as log
 
+_DEBUG = True
+
 
 def add_foreground_tile(
         foreground_tile_grid: list[list[ForegroundTile | None]],
@@ -158,14 +160,28 @@ def loop(
                 elif event.key == K_RIGHT or event.key == K_d:
                     log.debug("Right")
                     push_all_none_sliding(Direction.RIGHT)
-            elif False and event.type == MOUSEBUTTONUP:
+                elif _DEBUG:
+                    for fg_tile in foreground_tiles:
+                        # noinspection PyProtectedMember
+                        if fg_tile._rect.collidepoint(pygame.mouse.get_pos()):
+                            if event.key == K_i or event.key == K_k:
+                                if event.key == K_i:
+                                    # noinspection PyProtectedMember
+                                    fg_tile._value *= 2
+                                else:  # event.key == K_k
+                                    # noinspection PyProtectedMember
+                                    fg_tile._value //= 2
+                                # noinspection PyProtectedMember
+                                fg_tile._update_color()
+                            break
+            elif _DEBUG and event.type == MOUSEBUTTONUP:
                 for x, e in enumerate(background_tile_rect_grid):
                     for y, r in enumerate(e):
                         if r.collidepoint(event.pos):
                             match event.button:
                                 case 1:
                                     if foreground_tile_grid[x][y] is None:
-                                        tile = ForegroundTile(background_tile_grid[x][y].rect, (x, y))
+                                        tile = ForegroundTile(2, background_tile_grid[x][y].rect, (x, y))
                                         foreground_tile_grid[x][y] = tile
                                         foreground_tiles.append(tile)
                                 case 2:
@@ -175,6 +191,7 @@ def loop(
                                     if tile is not None:
                                         foreground_tiles.remove(tile)
                                     foreground_tile_grid[x][y] = None
+                            break
 
         for_removal = []
         for fg_tile in foreground_tiles:
