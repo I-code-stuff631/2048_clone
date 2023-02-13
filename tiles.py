@@ -71,6 +71,7 @@ class ForegroundTile:
             background_tile_rect_grid: list[list[Rect]],
             frame_rate,
     ):
+        """Returns true if the tile was pushed or false if it was not"""
         # Get tiles in the path of movment
         tiles_in_path = []
         next_grid_position = (
@@ -118,6 +119,7 @@ class ForegroundTile:
             self._sliding = direction
             # noinspection PyTypeChecker
             foreground_tile_grid[self._grid_position[0]][self._grid_position[1]] = None
+            return True
 
     def move(
             self,
@@ -193,3 +195,6 @@ class ForegroundTile:
 
     def get_grid_position(self):
         return self._grid_position
+
+    def get_value(self):
+        return self._value

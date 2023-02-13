@@ -90,8 +90,10 @@ def init(*, screen_size, frame_rate, volume=.2, percent_margin=1 / 30):  # Treat
     for _ in range(2):  # Two starting tiles
         add_foreground_tile(foreground_tile_grid, foreground_tiles, background_tile_grid)
 
-    font = pygame.font.SysFont(["Clear Sans", "Helvetica Neue", "Arial", "sans-serif"], round(scaling_factor * 55),
-                               bold=True)
+    font_path = pygame.font.match_font(["Clear Sans", "Helvetica Neue", "Arial", "sans-serif"], bold=True)
+    tile_font = pygame.font.Font(font_path, round(scaling_factor * 55))
+    win_lose_font = pygame.font.Font(font_path, round(scaling_factor * 60))
+    smol_font = pygame.font.Font(font_path, round(scaling_factor * 30))
 
     merge_sound = pygame.mixer.Sound("sounds/GROUP_GOMA_EN_0000003D.wav")
     merge_sound.set_volume(volume)
@@ -105,7 +107,9 @@ def init(*, screen_size, frame_rate, volume=.2, percent_margin=1 / 30):  # Treat
         big_square_rect,
         big_square_border_radius,
         frame_rate,
-        font,
+        tile_font,
+        win_lose_font,
+        smol_font,
         merge_sound,
     )
 
@@ -120,9 +124,13 @@ def loop(
         big_square_rect,
         big_square_border_radius,
         frame_rate,
-        font,
+        tile_font,
+        win_lose_font: pygame.font.Font,
+        smol_font,
         merge_sound: pygame.mixer.Sound,
 ):
+    has_won = continued_playing = False
+    fail_up = fail_down = fail_left = fail_right = False
     tiles_are_sliding = False  # Should be accurate after the tiles have moved for the first time
     clock = pygame.time.Clock()  # Special case
     while True:
@@ -136,9 +144,15 @@ def loop(
                 return
             elif event.type == KEYDOWN:
                 log.debug("Key pressed")
+                if has_won:
+                    continued_playing = True
 
                 def push_all_none_sliding(direction: Direction):
-                    """Pushes all tiles in the spesfied direction if none are currently sliding"""
+                    """
+                    Pushes all tiles in the spesfied direction if none are currently sliding.
+
+                    Returns true if it was able to push any tiles or some are sliding, otherwise it returns false.
+                    """
                     if not tiles_are_sliding:
                         # Sort it so that the push() method is called on the tiles in the proper order
                         match direction:
@@ -151,23 +165,27 @@ def loop(
                             case Direction.RIGHT:
                                 foreground_tiles.sort(key=lambda t: t.get_grid_position()[0])
 
+                        any_pushed = False
                         # noinspection PyShadowingNames
-                        for tile in foreground_tiles:  # Push all tiles
-                            tile.push(direction, foreground_tile_grid, background_tile_rect_grid, frame_rate)
+                        for tile in foreground_tiles:  # Push all
+                            if tile.push(direction, foreground_tile_grid, background_tile_rect_grid, frame_rate):
+                                any_pushed = True
 
                         foreground_tiles.reverse()  # Reverse for the move() method
+                        return any_pushed
+                    return True
                 if event.key == K_UP or event.key == K_w:
                     log.debug("Up")
-                    push_all_none_sliding(Direction.UP)
+                    fail_up = not push_all_none_sliding(Direction.UP)
                 elif event.key == K_DOWN or event.key == K_s:
                     log.debug("Down")
-                    push_all_none_sliding(Direction.DOWN)
+                    fail_down = not push_all_none_sliding(Direction.DOWN)
                 elif event.key == K_LEFT or event.key == K_a:
                     log.debug("Left")
-                    push_all_none_sliding(Direction.LEFT)
+                    fail_left = not push_all_none_sliding(Direction.LEFT)
                 elif event.key == K_RIGHT or event.key == K_d:
                     log.debug("Right")
-                    push_all_none_sliding(Direction.RIGHT)
+                    fail_right = not push_all_none_sliding(Direction.RIGHT)
                 elif _DEBUG:
                     for fg_tile in foreground_tiles:
                         # noinspection PyProtectedMember
@@ -203,7 +221,7 @@ def loop(
 
         for_removal = []
         for fg_tile in foreground_tiles:
-            fg_tile.draw(screen, tile_border_radius, font)
+            fg_tile.draw(screen, tile_border_radius, tile_font)
             if fg_tile.move(background_tile_rect_grid, foreground_tile_grid, merge_sound):  # Tile was put up for
                 # removal
                 for_removal.append(fg_tile)
@@ -219,6 +237,22 @@ def loop(
         if not tile_sliding and tiles_are_sliding:  # Tiles were just sliding
             add_foreground_tile(foreground_tile_grid, foreground_tiles, background_tile_grid)
         tiles_are_sliding = tile_sliding
+
+        # win-lose
+        if fail_up and fail_down and fail_left and fail_right:
+            text = win_lose_font.render("Game over!", True, Color("black"))
+            screen.blit(text, text.get_rect(center=screen.get_rect().center))
+        elif any(tile.get_value() >= 2048 for tile in foreground_tiles) and not continued_playing:
+            win_text = win_lose_font.render("You win! ;)", True, Color("black"), Color("white"))
+            screen_center: Rect = screen.get_rect().center
+            screen.blit(win_text, win_text.get_rect(center=(
+                screen_center[0],
+                screen_center[1] - win_text.get_height()
+            )))
+            continue_text: pygame.Surface = \
+                smol_font.render("(press any key to continue)", True, Color("black"), Color("white"))
+            screen.blit(continue_text, continue_text.get_rect(center=screen_center))
+            has_won = True
 
         pygame.display.flip()
         clock.tick(frame_rate)
