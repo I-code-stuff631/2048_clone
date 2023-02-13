@@ -48,7 +48,6 @@ class ForegroundTile:
         Color("#eee4da").lerp(rainbow_color((1275 // 10) * x), .15)
         for x in range(11)  # 0 - 10
     ]  # (11 colors)
-    # __BASE_TEXT_COLOR = Color("#776e65")
 
     def __init__(self, value: int, rect: Rect, grid_position: (int, int)):
         self._value = value
@@ -60,8 +59,10 @@ class ForegroundTile:
 
     def _update_color(self):
         """Updates the tiles color based on its current value"""
-        self._color = self._COLORS[round(math.log2(self._value)) - 1]
-        self._text_color = Color(255 - self._color.r, 255 - self._color.g, 255 - self._color.b)
+        index = round(math.log2(self._value)) - 1
+        index -= index // len(self._COLORS) * len(self._COLORS)  # Loop colors
+        self._color = self._COLORS[index]
+        self._text_color = Color(255 - self._color.r, 255 - self._color.g, 255 - self._color.b)  # Color("#776e65")
 
     def push(
             self,
@@ -122,6 +123,7 @@ class ForegroundTile:
             self,
             background_tile_rect_grid: list[list[Rect]],
             foreground_tile_grid: list[list],
+            merge_sound,
     ):
         if self._sliding is not None:
             next_grid_position = (
@@ -133,7 +135,7 @@ class ForegroundTile:
                 # noinspection PyTypeChecker
                 tile_under: ForegroundTile = foreground_tile_grid[self._grid_position[0]][self._grid_position[1]]
                 if tile_under is not None:
-                    tile_under._merge(self)
+                    tile_under._merge(self, merge_sound)
                     return True  # Put the tile up for removal
                 else:
                     self._sliding = None
@@ -172,12 +174,14 @@ class ForegroundTile:
                     if self._rect.right >= next_bg_tile_rect.right:
                         self._grid_position = next_grid_position
 
-    def _merge(self, other):
+    def _merge(self, other, sound: pygame.mixer.Sound):
         """The passed in tile needs to be removed after calling this"""
         other: ForegroundTile
         assert self._value == other._value
         self._value += other._value
         self._update_color()
+        if sound.get_num_channels() == 0:
+            sound.play()
 
     def draw(self, screen, border_radius, font: pygame.font.Font):
         pygame.draw.rect(screen, self._color, self._rect, border_radius=border_radius)

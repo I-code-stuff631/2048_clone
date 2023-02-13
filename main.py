@@ -24,17 +24,20 @@ def add_foreground_tile(
     foreground_tiles.append(tile)
 
 
-def init(*, screen_size, frame_rate, big_square_margin=10):  # Treat screen_size as
+def init(*, screen_size, frame_rate, volume=.2, percent_margin=1 / 30):  # Treat screen_size as
     # final unless you MUST do otherwise (trust me)
     """
-    Initlization code (code run before the loop)
-
-    longest_slide_time_in_mills:
-        The time it takes for a tile to slide from one end of the grid to the other (the longest slide time possible)
+    This was created so the initialization code, and the place where the program actually runs, (the loop) could be
+    nicely seperated. This was also made as an optimization as the initialization code contains many varibles that
+    are no longer needed after it is done running.
     """
+    pygame.mixer.pre_init(
+        channels=1  # Mono
+    )
     pygame.init()
     screen: pygame.Surface = pygame.display.set_mode((screen_size, screen_size))
     screen.fill(Color("#faf8ef"))
+    big_square_margin = screen_size / 2 * percent_margin
 
     # Calculate scaling factor
     their_big_squares_size: Final = 500
@@ -89,6 +92,9 @@ def init(*, screen_size, frame_rate, big_square_margin=10):  # Treat screen_size
 
     font = pygame.font.SysFont(["Clear Sans", "Helvetica Neue", "Arial", "sans-serif"], round(scaling_factor * 55),
                                bold=True)
+
+    merge_sound = pygame.mixer.Sound("sounds/GROUP_GOMA_EN_0000003D.wav")
+    merge_sound.set_volume(volume)
     return (
         screen,
         tile_border_radius,
@@ -100,6 +106,7 @@ def init(*, screen_size, frame_rate, big_square_margin=10):  # Treat screen_size
         big_square_border_radius,
         frame_rate,
         font,
+        merge_sound,
     )
 
 
@@ -114,6 +121,7 @@ def loop(
         big_square_border_radius,
         frame_rate,
         font,
+        merge_sound: pygame.mixer.Sound,
 ):
     tiles_are_sliding = False  # Should be accurate after the tiles have moved for the first time
     clock = pygame.time.Clock()  # Special case
@@ -196,7 +204,8 @@ def loop(
         for_removal = []
         for fg_tile in foreground_tiles:
             fg_tile.draw(screen, tile_border_radius, font)
-            if fg_tile.move(background_tile_rect_grid, foreground_tile_grid):  # Tile was put up for removal
+            if fg_tile.move(background_tile_rect_grid, foreground_tile_grid, merge_sound):  # Tile was put up for
+                # removal
                 for_removal.append(fg_tile)
         for fg_tile in for_removal:
             foreground_tiles.remove(fg_tile)
@@ -216,7 +225,8 @@ def loop(
 
 
 def main():
-    log.basicConfig(level=log.DEBUG)
+    if _DEBUG:
+        log.basicConfig(level=log.DEBUG)
     loop(*init(
         screen_size=600,
         frame_rate=60,
