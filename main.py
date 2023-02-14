@@ -24,7 +24,7 @@ def add_foreground_tile(
     foreground_tiles.append(tile)
 
 
-def init(*, screen_size, frame_rate, volume=.2, percent_margin=1 / 30):  # Treat screen_size as
+def init(*, screen_size, frame_rate=60, volume=.2, percent_margin=1 / 30):  # Treat screen_size as
     # final unless you MUST do otherwise (trust me)
     """
     This was created so the initialization code, and the place where the program actually runs, (the loop) could be
@@ -126,7 +126,7 @@ def loop(
         frame_rate,
         tile_font,
         win_lose_font: pygame.font.Font,
-        smol_font,
+        smol_font: pygame.font.Font,
         merge_sound: pygame.mixer.Sound,
 ):
     has_won = continued_playing = False
@@ -186,6 +186,9 @@ def loop(
                 elif event.key == K_RIGHT or event.key == K_d:
                     log.debug("Right")
                     fail_right = not push_all_none_sliding(Direction.RIGHT)
+                elif event.key == K_r:
+                    log.debug("Reset")
+                    return True  # Re-run
                 elif _DEBUG:
                     for fg_tile in foreground_tiles:
                         # noinspection PyProtectedMember
@@ -243,15 +246,18 @@ def loop(
             text = win_lose_font.render("Game over!", True, Color("black"))
             screen.blit(text, text.get_rect(center=screen.get_rect().center))
         elif any(tile.get_value() >= 2048 for tile in foreground_tiles) and not continued_playing:
-            win_text = win_lose_font.render("You win! ;)", True, Color("black"), Color("white"))
             screen_center: Rect = screen.get_rect().center
+
+            win_text = win_lose_font.render("You win! ;)", True, Color("black"), Color("white"))
             screen.blit(win_text, win_text.get_rect(center=(
                 screen_center[0],
                 screen_center[1] - win_text.get_height()
             )))
+
             continue_text: pygame.Surface = \
-                smol_font.render("(press any key to continue)", True, Color("black"), Color("white"))
+                smol_font.render("(press any key to continue)", True, Color("black"))  # Color("white")
             screen.blit(continue_text, continue_text.get_rect(center=screen_center))
+
             has_won = True
 
         pygame.display.flip()
@@ -261,10 +267,10 @@ def loop(
 def main():
     if _DEBUG:
         log.basicConfig(level=log.DEBUG)
-    loop(*init(
+    while loop(*init(
         screen_size=600,
-        frame_rate=60,
-    ))
+    )):
+        pass
 
 
 if __name__ == '__main__':
