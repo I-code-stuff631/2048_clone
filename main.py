@@ -3,9 +3,8 @@ from pygame.locals import *  # The "Prelude"
 import random
 from typing import Final
 from tiles import ForegroundTile, BackgroundTile, Direction
-import logging as log
 
-_DEBUG = True
+_DEBUG = False
 
 
 def add_foreground_tile(
@@ -93,7 +92,7 @@ def init(*, screen_size, frame_rate=60, volume=.2, percent_margin=1 / 30):  # Tr
     font_path = pygame.font.match_font(["Clear Sans", "Helvetica Neue", "Arial", "sans-serif"], bold=True)
     tile_font = pygame.font.Font(font_path, round(scaling_factor * 55))
     win_lose_font = pygame.font.Font(font_path, round(scaling_factor * 60))
-    smol_font = pygame.font.Font(font_path, round(scaling_factor * 30))
+    smol_font = pygame.font.Font(font_path, round(scaling_factor * 29))
 
     merge_sound = pygame.mixer.Sound("sounds/GROUP_GOMA_EN_0000003D.wav")
     merge_sound.set_volume(volume)
@@ -143,7 +142,6 @@ def loop(
             if event.type == QUIT:
                 return
             elif event.type == KEYDOWN:
-                log.debug("Key pressed")
                 if has_won:
                     continued_playing = True
 
@@ -175,19 +173,14 @@ def loop(
                         return any_pushed
                     return True
                 if event.key == K_UP or event.key == K_w:
-                    log.debug("Up")
                     fail_up = not push_all_none_sliding(Direction.UP)
                 elif event.key == K_DOWN or event.key == K_s:
-                    log.debug("Down")
                     fail_down = not push_all_none_sliding(Direction.DOWN)
                 elif event.key == K_LEFT or event.key == K_a:
-                    log.debug("Left")
                     fail_left = not push_all_none_sliding(Direction.LEFT)
                 elif event.key == K_RIGHT or event.key == K_d:
-                    log.debug("Right")
                     fail_right = not push_all_none_sliding(Direction.RIGHT)
                 elif event.key == K_r:
-                    log.debug("Reset")
                     return True  # Re-run
                 elif _DEBUG:
                     for fg_tile in foreground_tiles:
@@ -255,7 +248,7 @@ def loop(
             )))
 
             continue_text: pygame.Surface = \
-                smol_font.render("(press any key to continue)", True, Color("black"))  # Color("white")
+                smol_font.render("(press any key to continue playing)", True, Color("black"))  # Color("white")
             screen.blit(continue_text, continue_text.get_rect(center=screen_center))
 
             has_won = True
@@ -265,8 +258,6 @@ def loop(
 
 
 def main():
-    if _DEBUG:
-        log.basicConfig(level=log.DEBUG)
     while loop(*init(
         screen_size=600,
     )):
